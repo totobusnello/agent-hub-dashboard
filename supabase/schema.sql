@@ -143,6 +143,24 @@ create table public.pipeline_items (
   updated_at  timestamptz not null default now()
 );
 
+-- 1l. todos
+create table public.todos (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null unique,
+  description text,
+  status      text not null default 'todo' check (status in ('todo','in_progress','done','blocked')),
+  priority    int not null default 0,
+  agent_id    uuid references public.agents(id) on delete set null,
+  due_date    date,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+-- Unique constraints for heartbeat upserts
+alter table public.agents add constraint agents_name_unique unique (name);
+alter table public.cron_jobs add constraint cron_jobs_name_unique unique (name);
+alter table public.blockers add constraint blockers_title_unique unique (title);
+
 -- ============================================================
 -- 2. VIEWS
 -- ============================================================
@@ -270,6 +288,7 @@ alter table public.slack_channels  enable row level security;
 alter table public.cost_entries    enable row level security;
 alter table public.revenue_entries enable row level security;
 alter table public.pipeline_items  enable row level security;
+alter table public.todos           enable row level security;
 
 -- Admin policies: authenticated users get full access
 -- (In production, add role checks; for single-admin this is fine)
@@ -284,6 +303,7 @@ create policy "admin_all" on public.slack_channels  for all using (auth.role() =
 create policy "admin_all" on public.cost_entries    for all using (auth.role() = 'authenticated');
 create policy "admin_all" on public.revenue_entries for all using (auth.role() = 'authenticated');
 create policy "admin_all" on public.pipeline_items  for all using (auth.role() = 'authenticated');
+create policy "admin_all" on public.todos           for all using (auth.role() = 'authenticated');
 
 -- Service-role insert policies for agent_activity and agent_runs
 -- (Edge functions use service_role key, so RLS is bypassed there.

@@ -245,6 +245,32 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---- TODOS (CRUD) ----
+    if (segments[0] === "todos") {
+      if (req.method === "GET") {
+        const { data, error } = await supabase.from("todos").select("*").order("priority");
+        if (error) return json({ error: error.message }, 400);
+        return json(data);
+      }
+      if (req.method === "POST") {
+        const body = await req.json();
+        const { data, error } = await supabase.from("todos").insert(body).select().single();
+        if (error) return json({ error: error.message }, 400);
+        return json(data, 201);
+      }
+      if (req.method === "PUT" && segments.length === 2) {
+        const body = await req.json();
+        const { data, error } = await supabase.from("todos").update({ ...body, updated_at: new Date().toISOString() }).eq("id", segments[1]).select().single();
+        if (error) return json({ error: error.message }, 400);
+        return json(data);
+      }
+      if (req.method === "DELETE" && segments.length === 2) {
+        const { error } = await supabase.from("todos").delete().eq("id", segments[1]);
+        if (error) return json({ error: error.message }, 400);
+        return json({ success: true });
+      }
+    }
+
     return json({ error: "Not found" }, 404);
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
