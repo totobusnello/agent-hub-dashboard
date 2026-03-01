@@ -12,6 +12,7 @@ import Goals from "./pages/Goals";
 import Blockers from "./pages/Blockers";
 import Revenue from "./pages/Revenue";
 import Pipeline from "./pages/Pipeline";
+import Todos from "./pages/Todos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/blockers" element={<ProtectedRoute><Blockers /></ProtectedRoute>} />
             <Route path="/revenue" element={<ProtectedRoute><Revenue /></ProtectedRoute>} />
             <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
+            <Route path="/todos" element={<ProtectedRoute><Todos /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

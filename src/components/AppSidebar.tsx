@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   DollarSign,
   TrendingUp,
+  CheckSquare,
   LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -26,6 +27,7 @@ import {
 
 const navItems = [
   { title: "Agents", url: "/", icon: Bot },
+  { title: "Todos", url: "/todos", icon: CheckSquare },
   { title: "Cron Health", url: "/cron", icon: Clock },
   { title: "Goals", url: "/goals", icon: Target },
   { title: "Blockers", url: "/blockers", icon: AlertTriangle },
