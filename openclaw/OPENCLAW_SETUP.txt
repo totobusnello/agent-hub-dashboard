@@ -54,12 +54,12 @@ Tell the user: get these from Supabase → Settings → API. SUPABASE_SERVICE_KE
 
 4. REGISTER the cron job using the actual absolute path to this workspace:
 
-openclaw cron add --name "📊 Dashboard Heartbeat" --cron "0 8,14,20 * * *" --tz "America/Chicago" --target isolated --model haiku --message "Run this command: python3 {ABSOLUTE_WORKSPACE_PATH}/scripts/dashboard-heartbeat.py"
+openclaw cron add --name "📊 Dashboard Heartbeat" --cron "*/15 * * * *" --target isolated --model haiku --message "Run this command: python3 {ABSOLUTE_WORKSPACE_PATH}/scripts/dashboard-heartbeat.py"
 
 5. RUN the script once manually to verify it connects to Supabase and writes data. Show the output. If credentials are missing, skip and remind the user to fill in .env.dashboard first.
 
 6. PRINT a clear completion summary:
    - What was created
    - Reminder to fill in .env.dashboard with their Supabase URL and service role key
-   - That the cron will run at 8am, 2pm, and 8pm and keep the dashboard live
+   - That the cron will run every 15 minutes and keep the dashboard live
    - Link to their dashboard: their Vercel deployment URL (if they know it)

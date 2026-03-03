@@ -96,7 +96,7 @@ This is what makes the dashboard come alive. OpenClaw runs a heartbeat script 3x
    - Explore your workspace and read your agent SOUL.md files
    - Write a custom `scripts/dashboard-heartbeat.py` for your specific agents
    - Create a `.env.dashboard` file for your Supabase credentials
-   - Register the heartbeat cron job (runs at 8am, 2pm, 8pm)
+   - Register the heartbeat cron job (runs every 15 minutes)
 
 4. When OpenClaw finishes, open `.env.dashboard` in your workspace and fill in your credentials:
    ```
