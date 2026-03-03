@@ -1,285 +1,65 @@
-Set up the Agent Hub Dashboard integration for this OpenClaw workspace. Complete each step in order.
+Set up the Agent Hub Dashboard integration for this OpenClaw workspace. This connects your agents to a live web dashboard that displays their status, activity, cron health, todos, and blockers in real time.
+
+Before starting, explore this workspace — look at the agents/ directory structure, read any SOUL.md files you find, and check ~/.openclaw/cron/jobs.json to understand what cron jobs are active.
 
 ---
 
-STEP 1: Create the file `scripts/dashboard-heartbeat.py` in the workspace root (create the scripts/ directory if it doesn't exist). Write this exact content:
+YOUR TASKS:
 
-#!/usr/bin/env python3
-"""
-Agent Hub Dashboard — Heartbeat Script
-Auto-discovers agents from this OpenClaw workspace and pushes live state to Supabase.
-No pip dependencies — stdlib only.
-"""
+1. CREATE scripts/dashboard-heartbeat.py
 
-import os
-import re
-import json
-import glob
-import time
-import urllib.request
-import urllib.error
-from pathlib import Path
-from datetime import datetime, timezone
+Write a Python 3 script (stdlib only — no pip installs, use urllib not requests) that does the following every time it runs:
 
-WORKSPACE = str(Path(__file__).resolve().parent.parent)
+- Loads Supabase credentials from .env.dashboard in the workspace root
+- Auto-discovers all agents by scanning agents/*/SOUL.md — parse each agent's name (first # heading), emoji (first emoji character), purpose (## Purpose or ## Identity section), and model field
+- Reads cron job status from ~/.openclaw/cron/jobs.json
+- Reads manual overrides from agents/known-issues.json if it exists
+- Pushes everything to Supabase using the REST API (service role key)
 
-_env_path = os.path.join(WORKSPACE, ".env.dashboard")
-if os.path.exists(_env_path):
-    with open(_env_path) as _f:
-        for _line in _f:
-            _line = _line.strip()
-            if _line and not _line.startswith("#") and "=" in _line:
-                _k, _v = _line.split("=", 1)
-                os.environ.setdefault(_k.strip(), _v.strip())
+Supabase REST pattern: POST {SUPABASE_URL}/rest/v1/{table} with headers:
+  apikey: {SUPABASE_SERVICE_KEY}
+  Authorization: Bearer {SUPABASE_SERVICE_KEY}
+  Content-Type: application/json
+  Prefer: resolution=merge-duplicates,return=representation  (for upserts that need IDs back)
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+Tables to write to:
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("ERROR: Fill in .env.dashboard with your Supabase credentials.")
-    exit(1)
+agents — upsert by name:
+  name, emoji, purpose, model, is_active=true, last_heartbeat_at (ISO timestamp), heartbeat_payload (jsonb)
+  heartbeat_payload should contain: status (active/idle/degraded/blocked/errored), heartbeat_source="openclaw-cron",
+  last_output_hours_ago (check recency of files in agents/{dir}/output/),
+  degraded_reasons (list of erroring cron names if any), healthy_crons (list of healthy cron names),
+  and any fields from known-issues.json overrides (tools, output_type, revenue_model, blockers, etc.)
+  Status logic: start from cron health (erroring = degraded, ok = active, no crons = idle),
+  then overlay known-issues.json if the override is more severe.
 
+cron_jobs — upsert by name:
+  name, agent_id (FK — look up from agents upsert result), schedule, expected_cadence_minutes, last_run_at, next_expected_at, enabled=true
 
-def _rest(method, table, data=None, params="", extra_headers=None):
-    url = f"{SUPABASE_URL}/rest/v1/{table}"
-    if params:
-        url += f"?{params}"
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json",
-    }
-    if extra_headers:
-        headers.update(extra_headers)
-    body = json.dumps(data).encode() if data is not None else None
-    req = urllib.request.Request(url, data=body, headers=headers, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            content = resp.read().decode()
-            return json.loads(content) if content.strip() else []
-    except urllib.error.HTTPError as e:
-        print(f"  HTTP {e.code} on {method} {table}: {e.read().decode()[:200]}")
-        return []
+agent_activity — insert only (append log, do not upsert):
+  agent_id (FK), event_type="log", payload={"message": "Heartbeat — status: {status}"}
 
+After upserting agents use return=representation to get back the UUIDs — you need them for agent_id FK fields in other tables.
 
-def upsert(table, rows):
-    if not rows:
-        return []
-    return _rest("POST", table, rows,
-                 extra_headers={"Prefer": "resolution=merge-duplicates,return=representation"})
-
-
-def patch(table, where, data):
-    _rest("PATCH", table, data, where, extra_headers={"Prefer": "return=minimal"})
-
-
-def insert(table, rows):
-    if not rows:
-        return
-    _rest("POST", table, rows, extra_headers={"Prefer": "return=minimal"})
-
-
-def _first_heading(text):
-    m = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
-    return m.group(1).strip() if m else None
-
-
-def _first_emoji(text):
-    m = re.search(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]", text)
-    return m.group(0) if m else "🤖"
-
-
-def _section(text, name):
-    m = re.search(rf"##\s+{re.escape(name)}\s*\n(.*?)(?=\n##|\Z)", text, re.DOTALL | re.IGNORECASE)
-    return m.group(1).strip() if m else None
-
-
-def _field(text, name):
-    m = re.search(rf"\*?\*?{re.escape(name)}\*?\*?\s*[:\-]\s*([^\n]+)", text, re.IGNORECASE)
-    return m.group(1).strip() if m else None
-
-
-def _file_age_hours(path):
-    if not os.path.isdir(path):
-        return None
-    files = [f for f in glob.glob(os.path.join(path, "**", "*"), recursive=True) if os.path.isfile(f)]
-    if not files:
-        return None
-    return (time.time() - max(os.path.getmtime(f) for f in files)) / 3600
-
-
-def _now():
-    return datetime.now(timezone.utc).isoformat()
-
-
-def discover_agents():
-    agents_dir = os.path.join(WORKSPACE, "agents")
-    if not os.path.isdir(agents_dir):
-        return []
-    agents = []
-    for entry in sorted(os.listdir(agents_dir)):
-        agent_path = os.path.join(agents_dir, entry)
-        soul_path = os.path.join(agent_path, "SOUL.md")
-        if not os.path.isdir(agent_path) or not os.path.exists(soul_path):
-            continue
-        soul = open(soul_path).read()
-        name = _first_heading(soul) or entry
-        purpose = _section(soul, "Purpose") or _section(soul, "Identity") or _section(soul, "Role") or ""
-        purpose = purpose.split("\n")[0].split(".")[0].strip()[:200]
-        agents.append({
-            "dir": entry, "name": name, "emoji": _first_emoji(soul),
-            "purpose": purpose, "model": _field(soul, "Model") or "claude",
-            "path": agent_path,
-        })
-    return agents
-
-
-def load_openclaw_crons():
-    cron_path = os.path.expanduser("~/.openclaw/cron/jobs.json")
-    if not os.path.exists(cron_path):
-        return {}
-    try:
-        return json.load(open(cron_path))
-    except Exception:
-        return {}
-
-
-def load_known_issues():
-    path = os.path.join(WORKSPACE, "agents", "known-issues.json")
-    if not os.path.exists(path):
-        return {}
-    try:
-        return json.load(open(path)).get("agent_issues", {})
-    except Exception:
-        return {}
-
-
-_SEVERITY = ["active", "running", "idle", "degraded", "paused", "blocked", "errored"]
-
-
-def compute_heartbeat(agent, cron_jobs, known_issues):
-    name, dir_name = agent["name"], agent["dir"]
-    matching = {k: v for k, v in cron_jobs.items()
-                if dir_name.lower() in k.lower() or name.lower() in k.lower()}
-    if matching:
-        if any(v.get("status") == "error" for v in matching.values()):
-            base_status = "degraded"
-        elif any(v.get("status") == "ok" for v in matching.values()):
-            base_status = "active"
-        else:
-            base_status = "idle"
-    else:
-        base_status = "idle"
-
-    payload = {"status": base_status, "heartbeat_source": "openclaw-cron"}
-    output_age = _file_age_hours(os.path.join(agent["path"], "output"))
-    memory_age = _file_age_hours(os.path.join(agent["path"], "memory"))
-    if output_age is not None:
-        payload["last_output_hours_ago"] = round(output_age, 1)
-    if memory_age is not None:
-        payload["last_memory_hours_ago"] = round(memory_age, 1)
-    if matching:
-        bad = [f"{k}: {v.get('last_error','error')}" for k, v in matching.items() if v.get("status") == "error"]
-        good = [k for k, v in matching.items() if v.get("status") != "error"]
-        if bad: payload["degraded_reasons"] = bad
-        if good: payload["healthy_crons"] = good
-
-    known = known_issues.get(name, {})
-    if known:
-        known_status = known.get("status", base_status)
-        if _SEVERITY.index(known_status) if known_status in _SEVERITY else 0 >= \
-           _SEVERITY.index(base_status) if base_status in _SEVERITY else 0:
-            payload["status"] = known_status
-        for f in ["detail","blockers","workaround","recent_wins","last_output","tools",
-                  "output_type","revenue_model","total_outputs","capabilities","data_summary"]:
-            if f in known: payload[f] = known[f]
-    return payload
-
-
-def build_cron_rows(agent_ids, cron_jobs):
-    rows = []
-    for cron_name, cron_data in cron_jobs.items():
-        agent_id = next((uid for aname, uid in agent_ids.items()
-                         if aname.lower() in cron_name.lower()), None)
-        row = {"name": cron_name, "schedule": cron_data.get("schedule",""),
-               "expected_cadence_minutes": cron_data.get("expected_cadence_minutes", 1440),
-               "enabled": True}
-        if cron_data.get("last_run_at"): row["last_run_at"] = cron_data["last_run_at"]
-        if cron_data.get("next_run_at"): row["next_expected_at"] = cron_data["next_run_at"]
-        if agent_id: row["agent_id"] = agent_id
-        rows.append(row)
-    return rows
-
-
-def main():
-    print(f"[{_now()}] Dashboard heartbeat starting...")
-    cron_jobs = load_openclaw_crons()
-    known_issues = load_known_issues()
-    agents = discover_agents()
-    if not agents:
-        print("  No agents found. Check agents/*/SOUL.md exists.")
-        return
-    print(f"  Discovered: {[a['name'] for a in agents]}")
-
-    result = upsert("agents", [
-        {"name": a["name"], "emoji": a["emoji"], "purpose": a["purpose"],
-         "model": a["model"], "is_active": True}
-        for a in agents
-    ])
-    agent_ids = {row["name"]: row["id"] for row in result} if result else {}
-    print(f"  Agents synced ({len(agent_ids)})")
-
-    for agent in agents:
-        uid = agent_ids.get(agent["name"])
-        if not uid: continue
-        payload = compute_heartbeat(agent, cron_jobs, known_issues)
-        patch("agents", f"id=eq.{uid}", {"last_heartbeat_at": _now(), "heartbeat_payload": payload})
-        insert("agent_activity", [{"agent_id": uid, "event_type": "log",
-            "payload": {"message": f"Heartbeat — status: {payload['status']}", "status": payload["status"]}}])
-
-    cron_rows = build_cron_rows(agent_ids, cron_jobs)
-    if cron_rows:
-        upsert("cron_jobs", cron_rows)
-        print(f"  Cron jobs synced ({len(cron_rows)})")
-
-    print("  Done!")
-
-
-if __name__ == "__main__":
-    main()
-
----
-
-STEP 2: Create `.env.dashboard` in the workspace root with this content (do not overwrite if it already exists):
+2. CREATE .env.dashboard in the workspace root:
 
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_SERVICE_KEY=YOUR_SERVICE_ROLE_KEY_HERE
 
----
+Tell the user: get these from Supabase → Settings → API. SUPABASE_SERVICE_KEY is the service_role key (not the anon key).
 
-STEP 3: Create `agents/known-issues.json` only if it does not already exist:
+3. CREATE agents/known-issues.json if it does not already exist:
 
-{
-  "_doc": "Manual agent status overrides. Edit when you discover issues the heartbeat cannot auto-detect.",
-  "agent_issues": {}
-}
+{"_doc": "Manual agent status overrides the heartbeat cannot auto-detect.", "agent_issues": {}}
 
----
+4. REGISTER the cron job using the actual absolute path to this workspace:
 
-STEP 4: Register the dashboard heartbeat cron job. Use the absolute path to this workspace for the script path. Run:
+openclaw cron add --name "📊 Dashboard Heartbeat" --cron "0 8,14,20 * * *" --tz "America/Chicago" --target isolated --model haiku --message "Run this command: python3 {ABSOLUTE_WORKSPACE_PATH}/scripts/dashboard-heartbeat.py"
 
-openclaw cron add --name "📊 Dashboard Heartbeat" --cron "0 8,14,20 * * *" --tz "America/Chicago" --target isolated --model haiku --message "Run this command exactly: python3 ABSOLUTE_PATH_TO_WORKSPACE/scripts/dashboard-heartbeat.py"
+5. RUN the script once manually to verify it connects to Supabase and writes data. Show the output. If credentials are missing, skip and remind the user to fill in .env.dashboard first.
 
-Replace ABSOLUTE_PATH_TO_WORKSPACE with the real absolute path to this workspace (e.g. /Users/yourname/workspace).
-
----
-
-STEP 5: When all steps are complete, print this message:
-
-✅ Agent Hub Dashboard integration is set up.
-
-Next steps:
-1. Edit .env.dashboard — add your SUPABASE_URL and SUPABASE_SERVICE_KEY
-   (get these from: Supabase → Settings → API)
-2. The next heartbeat run will auto-discover your agents and populate the dashboard
-3. To run the heartbeat manually right now: python3 scripts/dashboard-heartbeat.py
+6. PRINT a clear completion summary:
+   - What was created
+   - Reminder to fill in .env.dashboard with their Supabase URL and service role key
+   - That the cron will run at 8am, 2pm, and 8pm and keep the dashboard live
+   - Link to their dashboard: their Vercel deployment URL (if they know it)
