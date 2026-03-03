@@ -13,8 +13,8 @@ const columnLabels: Record<string, string> = {
 };
 const columnColors: Record<string, string> = {
   todo: "bg-muted-foreground",
-  in_progress: "bg-accent",
-  done: "bg-primary",
+  in_progress: "bg-foreground",
+  done: "bg-success",
   blocked: "bg-destructive",
 };
 
@@ -45,7 +45,7 @@ const Todos = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-mono font-bold tracking-tight">Todos</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Todos</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Task board — see which agents are addressing each item
         </p>
@@ -61,10 +61,10 @@ const Todos = () => {
               <div key={col} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className={cn("h-2 w-2 rounded-full", columnColors[col])} />
-                  <h3 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
                     {columnLabels[col]}
                   </h3>
-                  <Badge variant="secondary" className="text-[10px] font-mono">
+                  <Badge variant="secondary" className="text-[10px]">
                     {items.length}
                   </Badge>
                 </div>
@@ -83,13 +83,13 @@ const Todos = () => {
                           {agent && (
                             <div className="mt-2 flex items-center gap-1.5">
                               <span className="text-sm">{agent.emoji}</span>
-                              <span className="text-[11px] font-mono text-primary">
+                              <span className="text-[11px] text-muted-foreground">
                                 {agent.name}
                               </span>
                             </div>
                           )}
                           {todo.due_date && (
-                            <p className="text-[10px] text-muted-foreground font-mono mt-1">
+                            <p className="text-[10px] text-muted-foreground mt-1">
                               Due: {todo.due_date}
                             </p>
                           )}
@@ -98,7 +98,7 @@ const Todos = () => {
                     );
                   })}
                   {items.length === 0 && (
-                    <div className="border border-dashed border-border/30 rounded-lg p-4 text-center text-xs text-muted-foreground font-mono">
+                    <div className="border border-dashed border-border/30 rounded-lg p-4 text-center text-xs text-muted-foreground">
                       Empty
                     </div>
                   )}

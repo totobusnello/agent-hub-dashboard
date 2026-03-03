@@ -85,14 +85,51 @@ export default {
           to: { height: "0" },
         },
         "pulse-glow": {
+          "0%, 100%": { opacity: "1", boxShadow: "0 0 4px currentColor" },
+          "50%": { opacity: "0.6", boxShadow: "0 0 8px currentColor, 0 0 16px currentColor" },
+        },
+        "shimmer": {
+          "0%": { backgroundPosition: "0% 50%" },
+          "100%": { backgroundPosition: "300% 50%" },
+        },
+        "breathe-green": {
+          "0%, 100%": { boxShadow: "0 0 4px hsl(142 60% 50% / 0.3)" },
+          "50%": { boxShadow: "0 0 12px hsl(142 60% 50% / 0.6), 0 0 24px hsl(142 60% 50% / 0.2)" },
+        },
+        "breathe-amber": {
+          "0%, 100%": { boxShadow: "0 0 4px hsl(38 80% 55% / 0.3)" },
+          "50%": { boxShadow: "0 0 10px hsl(38 80% 55% / 0.5)" },
+        },
+        "flicker-red": {
+          "0%, 90%, 100%": { opacity: "1" },
+          "92%": { opacity: "0.4" },
+          "95%": { opacity: "0.9" },
+          "97%": { opacity: "0.3" },
+        },
+        "live-pulse": {
           "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.5" },
+          "50%": { opacity: "0.4" },
+        },
+        "neon-flash": {
+          "0%": { borderColor: "hsl(190 90% 50% / 0.8)", boxShadow: "0 0 20px hsl(190 90% 50% / 0.4)" },
+          "100%": { borderColor: "hsl(0 0% 100% / 0.06)", boxShadow: "none" },
+        },
+        "marquee-scroll": {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "shimmer": "shimmer 4s linear infinite",
+        "breathe-green": "breathe-green 3s ease-in-out infinite",
+        "breathe-amber": "breathe-amber 2.5s ease-in-out infinite",
+        "flicker-red": "flicker-red 3s steps(1) infinite",
+        "live-pulse": "live-pulse 2s ease-in-out infinite",
+        "neon-flash": "neon-flash 1s ease-out forwards",
+        "marquee": "marquee-scroll 30s linear infinite",
       },
     },
   },

@@ -32,14 +32,13 @@ const Auth = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card className="w-[400px] border-border/50 glow-primary">
+        <Card className="w-[400px] border-border/50">
           <CardHeader className="text-center space-y-2">
-            <div className="text-4xl mb-2">🦀</div>
-            <CardTitle className="text-2xl font-mono tracking-tight">
-              TRENCHCLAW
+            <CardTitle className="text-2xl font-semibold tracking-tight">
+              TrenchClaw
             </CardTitle>
-            <p className="text-sm text-muted-foreground font-mono">
-              COMMAND CENTER
+            <p className="text-sm text-muted-foreground">
+              Sign in to continue
             </p>
           </CardHeader>
           <CardContent>
@@ -47,10 +46,10 @@ const Auth = () => {
               <div className="space-y-2">
                 <Input
                   type="email"
-                  placeholder="operator@trenchclaw.io"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-secondary border-border font-mono text-sm"
+                  className="bg-secondary border-border text-sm"
                   required
                 />
               </div>
@@ -60,19 +59,19 @@ const Auth = () => {
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-secondary border-border font-mono text-sm"
+                  className="bg-secondary border-border text-sm"
                   required
                 />
               </div>
               {error && (
-                <p className="text-destructive text-sm font-mono">{error}</p>
+                <p className="text-destructive text-sm">{error}</p>
               )}
               <Button
                 type="submit"
-                className="w-full font-mono font-semibold tracking-wide"
+                className="w-full font-medium"
                 disabled={loading}
               >
-                {loading ? "AUTHENTICATING..." : "ACCESS GRANTED →"}
+                {loading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           </CardContent>

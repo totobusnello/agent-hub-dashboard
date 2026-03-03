@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Bot,
   Clock,
@@ -24,54 +25,96 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useLatestActivity } from "@/hooks/useAgentActivity";
+import { cn } from "@/lib/utils";
 
 const navItems = [
-  { title: "Agents", url: "/", icon: Bot },
-  { title: "Todos", url: "/todos", icon: CheckSquare },
-  { title: "Cron Health", url: "/cron", icon: Clock },
-  { title: "Goals", url: "/goals", icon: Target },
-  { title: "Blockers", url: "/blockers", icon: AlertTriangle },
-  { title: "Revenue", url: "/revenue", icon: DollarSign },
-  { title: "Pipeline", url: "/pipeline", icon: TrendingUp },
+  { title: "Agents", url: "/", icon: Bot, eventSection: "agents" },
+  { title: "Todos", url: "/todos", icon: CheckSquare, eventSection: "todos" },
+  { title: "Cron Health", url: "/cron", icon: Clock, eventSection: "cron" },
+  { title: "Goals", url: "/goals", icon: Target, eventSection: "goals" },
+  { title: "Blockers", url: "/blockers", icon: AlertTriangle, eventSection: "blockers" },
+  { title: "Revenue", url: "/revenue", icon: DollarSign, eventSection: "revenue" },
+  { title: "Pipeline", url: "/pipeline", icon: TrendingUp, eventSection: "pipeline" },
 ];
+
+// Map event types to sidebar sections that should glow
+const eventToSection: Record<string, string> = {
+  error: "blockers",
+  output: "agents",
+  status_change: "agents",
+  metric: "revenue",
+  log: "cron",
+};
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const { data: latestEvents } = useLatestActivity(1);
+  const latestEvent = latestEvents?.[latestEvents.length - 1] ?? null;
+  const [glowingSections, setGlowingSections] = useState<Set<string>>(new Set());
+
+  // Trigger glow on events
+  useEffect(() => {
+    if (!latestEvent) return;
+
+    const section = eventToSection[latestEvent.event_type];
+    if (!section) return;
+
+    setGlowingSections((prev) => new Set(prev).add(section));
+
+    const timer = setTimeout(() => {
+      setGlowingSections((prev) => {
+        const next = new Set(prev);
+        next.delete(section);
+        return next;
+      });
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [latestEvent]);
 
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="font-mono text-xs tracking-widest text-primary">
-            {!collapsed && "🦀 TRENCHCLAW"}
+          <SidebarGroupLabel className="text-xs font-semibold tracking-wide">
+            {!collapsed && <span className="text-gradient-shimmer">TrenchClaw</span>}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className="hover:bg-sidebar-accent/50"
-                      activeClassName="bg-sidebar-accent text-primary font-medium"
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navItems.map((item) => {
+                const isGlowing = glowingSections.has(item.eventSection);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/"}
+                        className="hover:bg-sidebar-accent/50"
+                        activeClassName="bg-sidebar-accent text-foreground font-medium border-l-2 border-cyan-400/50"
+                      >
+                        <item.icon
+                          className={cn(
+                            "mr-2 h-4 w-4 transition-all duration-300",
+                            isGlowing && "text-cyan-400 drop-shadow-[0_0_6px_hsl(190_90%_50%/0.6)]"
+                          )}
+                        />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-2">
         {!collapsed && (
-          <p className="text-xs text-muted-foreground font-mono truncate px-2 mb-1">
+          <p className="text-xs text-muted-foreground truncate px-2 mb-1">
             {user?.email}
           </p>
         )}

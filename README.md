@@ -1,73 +1,64 @@
-# Welcome to your Lovable project
+# Agent Hub Dashboard
 
-## Project info
+Real-time command center for monitoring your AI agent fleet. Built for [OpenClaw](https://openclaw.ai) users who want full visibility into what their agents are doing.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+See [SETUP.md](SETUP.md) for the full setup guide (3 steps, ~15 minutes).
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **Agent Fleet Grid** -- Live status cards for every agent with heartbeat tracking
+- **Neural Map** -- Interactive graph visualization of agent-to-agent relationships
+- **System Terminal** -- Real-time scrolling log of agent activity events
+- **Goals Kanban** -- Drag-and-drop board with multi-agent assignment
+- **Todos & Blockers** -- Task and issue tracking by agent
+- **Cron Health** -- Lateness monitoring with human-readable schedules
+- **Revenue & Costs** -- Financial KPIs and entry tracking
+- **Sales Pipeline** -- 6-stage deal kanban
 
-**Use Lovable**
+## Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- React 18 + TypeScript + Vite
+- Tailwind CSS + shadcn/ui
+- Supabase (Postgres + Auth + Edge Functions)
+- TanStack React Query
+- @xyflow/react (Neural Map)
+- @dnd-kit (drag-and-drop)
+- Framer Motion (animations)
 
-Changes made via Lovable will be committed automatically to this repo.
+## Quick Start
 
-**Use your preferred IDE**
+See [SETUP.md](SETUP.md) for the full setup guide.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+# 1. Clone and install
+git clone <this-repo>
+cd agent-hub-dashboard
+npm install
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# 2. Configure
+cp .env.example .env
+# Edit .env with your Supabase credentials
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 3. Run
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## How It Works
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full integration contract.
 
-**Use GitHub Codespaces**
+**TL;DR:** Your OpenClaw instance runs a heartbeat script every 15 minutes that pushes agent state to Supabase. The dashboard reads from Supabase and renders everything live.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+OpenClaw --> heartbeat script --> Supabase --> Dashboard
+```
 
-## What technologies are used for this project?
+## Commands
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```bash
+npm run dev      # Start dev server (localhost:8080)
+npm run build    # Production build
+npx tsc --noEmit # Type check
+npm run lint     # ESLint
+npm test         # Run tests
+```

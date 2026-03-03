@@ -20,6 +20,9 @@ create table public.agents (
   model         text,
   expected_cadence_minutes int, -- how often this agent should run
   status_override jsonb,        -- { status, reason, set_at, expires_at }
+  is_active     boolean not null default true,  -- soft-delete flag
+  last_heartbeat_at timestamptz,                -- last heartbeat from agent
+  heartbeat_payload jsonb,                      -- { status, current_task, uptime_seconds, ... }
   created_at    timestamptz not null default now()
 );
 
@@ -92,10 +95,18 @@ create table public.goals (
   description text,
   status      text not null default 'backlog' check (status in ('backlog','in_progress','done','blocked')),
   priority    int not null default 0,
-  agent_id    uuid references public.agents(id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
+-- 1g2. goal_agents (many-to-many join)
+create table public.goal_agents (
+  goal_id    uuid not null references public.goals(id) on delete cascade,
+  agent_id   uuid not null references public.agents(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (goal_id, agent_id)
+);
+create index idx_goal_agents_agent on public.goal_agents(agent_id);
 
 -- 1h. slack_channels
 create table public.slack_channels (
@@ -156,6 +167,15 @@ create table public.todos (
   updated_at  timestamptz not null default now()
 );
 
+-- 1m. agent_relationships (topology for neural map)
+create table public.agent_relationships (
+  source_agent_id uuid not null references public.agents(id) on delete cascade,
+  target_agent_id uuid not null references public.agents(id) on delete cascade,
+  relationship_type text not null default 'feeds',
+  created_at timestamptz not null default now(),
+  primary key (source_agent_id, target_agent_id)
+);
+
 -- Unique constraints for heartbeat upserts
 alter table public.agents add constraint agents_name_unique unique (name);
 alter table public.cron_jobs add constraint cron_jobs_name_unique unique (name);
@@ -165,15 +185,18 @@ alter table public.blockers add constraint blockers_title_unique unique (title);
 -- 2. VIEWS
 -- ============================================================
 
--- 2a. agent_current_status — computed from latest run + override
+-- 2a. agent_current_status — computed from heartbeat + latest run + override
 create or replace view public.agent_current_status as
 select
   a.id,
   a.name,
   a.emoji,
   a.purpose,
+  a.is_active,
   a.expected_cadence_minutes,
   a.status_override,
+  a.last_heartbeat_at,
+  a.heartbeat_payload,
   lr.last_run_at,
   lr.last_outcome,
   case
@@ -182,18 +205,30 @@ select
          and (a.status_override->>'expires_at' is null
               or (a.status_override->>'expires_at')::timestamptz > now())
       then a.status_override->>'status'
-    -- no runs ever
-    when lr.last_run_at is null then 'unknown'
+    -- heartbeat: if agent recently reported status, trust it
+    when a.heartbeat_payload->>'status' is not null
+         and a.last_heartbeat_at > now() - interval '10 minutes'
+      then a.heartbeat_payload->>'status'
+    -- heartbeat stale: had heartbeats but stopped
+    when a.last_heartbeat_at is not null
+         and a.last_heartbeat_at < now() - coalesce(
+           (a.expected_cadence_minutes * 2 || ' minutes')::interval,
+           interval '10 minutes'
+         )
+      then 'stale'
+    -- no heartbeat ever + no runs ever
+    when a.last_heartbeat_at is null and lr.last_run_at is null then 'unknown'
     -- latest run errored
     when lr.last_outcome = 'error' then 'errored'
-    -- stale: no run within 2× expected cadence
+    -- run-based stale
     when a.expected_cadence_minutes is not null
          and lr.last_run_at < now() - (a.expected_cadence_minutes * 2 || ' minutes')::interval
       then 'stale'
     -- otherwise healthy
     else 'active'
   end as computed_status,
-  lr.last_summary
+  lr.last_summary,
+  a.heartbeat_payload->>'current_task' as current_task
 from public.agents a
 left join lateral (
   select
@@ -284,11 +319,13 @@ alter table public.agent_api_keys  enable row level security;
 alter table public.cron_jobs       enable row level security;
 alter table public.blockers        enable row level security;
 alter table public.goals           enable row level security;
+alter table public.goal_agents     enable row level security;
 alter table public.slack_channels  enable row level security;
 alter table public.cost_entries    enable row level security;
 alter table public.revenue_entries enable row level security;
 alter table public.pipeline_items  enable row level security;
 alter table public.todos           enable row level security;
+alter table public.agent_relationships enable row level security;
 
 -- Admin policies: authenticated users get full access
 -- (In production, add role checks; for single-admin this is fine)
@@ -299,11 +336,13 @@ create policy "admin_all" on public.agent_api_keys  for all using (auth.role() =
 create policy "admin_all" on public.cron_jobs       for all using (auth.role() = 'authenticated');
 create policy "admin_all" on public.blockers        for all using (auth.role() = 'authenticated');
 create policy "admin_all" on public.goals           for all using (auth.role() = 'authenticated');
+create policy "admin_all" on public.goal_agents     for all using (auth.role() = 'authenticated');
 create policy "admin_all" on public.slack_channels  for all using (auth.role() = 'authenticated');
 create policy "admin_all" on public.cost_entries    for all using (auth.role() = 'authenticated');
 create policy "admin_all" on public.revenue_entries for all using (auth.role() = 'authenticated');
 create policy "admin_all" on public.pipeline_items  for all using (auth.role() = 'authenticated');
 create policy "admin_all" on public.todos           for all using (auth.role() = 'authenticated');
+create policy "admin_all" on public.agent_relationships for all using (auth.role() = 'authenticated');
 
 -- Service-role insert policies for agent_activity and agent_runs
 -- (Edge functions use service_role key, so RLS is bypassed there.

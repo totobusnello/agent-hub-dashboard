@@ -14,10 +14,10 @@ const stageLabels: Record<string, string> = {
 };
 const stageColors: Record<string, string> = {
   lead: "bg-muted-foreground",
-  contacted: "bg-accent",
-  proposal: "bg-accent",
+  contacted: "bg-foreground",
+  proposal: "bg-foreground",
   negotiation: "bg-warning",
-  closed_won: "bg-primary",
+  closed_won: "bg-success",
   closed_lost: "bg-destructive",
 };
 
@@ -34,12 +34,17 @@ const Pipeline = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-mono font-bold tracking-tight">Pipeline</h1>
-          <p className="text-muted-foreground text-sm mt-1">Deal flow and revenue pipeline</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight">Pipeline</h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs font-medium text-warning">
+              Coming Soon
+            </span>
+          </div>
+          <p className="text-muted-foreground text-sm mt-1">Deal flow and revenue pipeline — agent-driven pipeline updates coming in a future release</p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-muted-foreground font-mono">PIPELINE VALUE</p>
-          <p className="text-xl font-mono font-bold text-primary">${totalValue.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Pipeline Value</p>
+          <p className="text-xl font-semibold tabular-nums">${totalValue.toLocaleString()}</p>
         </div>
       </div>
 
@@ -53,10 +58,10 @@ const Pipeline = () => {
               <div key={stage} className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div className={`h-2 w-2 rounded-full ${stageColors[stage]}`} />
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     {stageLabels[stage]}
                   </span>
-                  <Badge variant="secondary" className="text-[10px] font-mono">{items.length}</Badge>
+                  <Badge variant="secondary" className="text-[10px]">{items.length}</Badge>
                 </div>
                 <div className="space-y-2">
                   {items.map((item: any) => (
@@ -64,7 +69,7 @@ const Pipeline = () => {
                       <CardContent className="p-3">
                         <p className="text-xs font-medium truncate">{item.name}</p>
                         {item.value && (
-                          <p className="text-[11px] font-mono text-primary mt-1">
+                          <p className="text-[11px] tabular-nums text-muted-foreground mt-1">
                             ${Number(item.value).toLocaleString()}
                           </p>
                         )}
