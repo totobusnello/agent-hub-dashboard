@@ -8,11 +8,10 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import Auth from "./pages/Auth";
 import Index from "./pages/Index";
 import CronHealth from "./pages/CronHealth";
-import Goals from "./pages/Goals";
 import Blockers from "./pages/Blockers";
-import Revenue from "./pages/Revenue";
-import Pipeline from "./pages/Pipeline";
-import Todos from "./pages/Todos";
+import Tarefas from "./pages/Tarefas";
+import UpdateSistema from "./pages/UpdateSistema";
+import MemoriaDecisoes from "./pages/MemoriaDecisoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,11 +47,12 @@ const App = () => (
             <Route path="/auth" element={<AuthRoute />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/cron" element={<ProtectedRoute><CronHealth /></ProtectedRoute>} />
-            <Route path="/goals" element={<ProtectedRoute><Goals /></ProtectedRoute>} />
             <Route path="/blockers" element={<ProtectedRoute><Blockers /></ProtectedRoute>} />
-            <Route path="/revenue" element={<ProtectedRoute><Revenue /></ProtectedRoute>} />
-            <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
-            <Route path="/todos" element={<ProtectedRoute><Todos /></ProtectedRoute>} />
+            <Route path="/tarefas" element={<ProtectedRoute><Tarefas /></ProtectedRoute>} />
+            <Route path="/update-sistema" element={<ProtectedRoute><UpdateSistema /></ProtectedRoute>} />
+            <Route path="/memoria" element={<ProtectedRoute><MemoriaDecisoes /></ProtectedRoute>} />
+            {/* Legacy redirects */}
+            <Route path="/todos" element={<Navigate to="/tarefas" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

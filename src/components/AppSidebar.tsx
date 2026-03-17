@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import {
   Bot,
   Clock,
-  Target,
   AlertTriangle,
-  DollarSign,
-  TrendingUp,
   CheckSquare,
+  RefreshCw,
+  Brain,
   LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -30,12 +29,11 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { title: "Agents", url: "/", icon: Bot, eventSection: "agents" },
-  { title: "Todos", url: "/todos", icon: CheckSquare, eventSection: "todos" },
+  { title: "Tarefas & Pendências", url: "/tarefas", icon: CheckSquare, eventSection: "tarefas" },
   { title: "Cron Health", url: "/cron", icon: Clock, eventSection: "cron" },
-  { title: "Goals", url: "/goals", icon: Target, eventSection: "goals" },
   { title: "Blockers", url: "/blockers", icon: AlertTriangle, eventSection: "blockers" },
-  { title: "Revenue", url: "/revenue", icon: DollarSign, eventSection: "revenue" },
-  { title: "Pipeline", url: "/pipeline", icon: TrendingUp, eventSection: "pipeline" },
+  { title: "Update de Sistema", url: "/update-sistema", icon: RefreshCw, eventSection: "update" },
+  { title: "Memória & Decisões", url: "/memoria", icon: Brain, eventSection: "memoria" },
 ];
 
 // Map event types to sidebar sections that should glow
@@ -43,7 +41,6 @@ const eventToSection: Record<string, string> = {
   error: "blockers",
   output: "agents",
   status_change: "agents",
-  metric: "revenue",
   log: "cron",
 };
 
@@ -81,7 +78,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold tracking-wide">
-            {!collapsed && <span className="text-gradient-shimmer">TrenchClaw</span>}
+            {!collapsed && <span className="text-gradient-shimmer">TotoClaw</span>}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
