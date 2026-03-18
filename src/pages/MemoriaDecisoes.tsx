@@ -1,132 +1,133 @@
-import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useNotionQuery } from "@/hooks/useNotionQuery";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Brain } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
-interface Memory {
+interface MemoryEntry {
   id: string;
-  title: string;
-  content: string | null;
-  category: string | null;
-  agent_id: string | null;
-  created_at: string;
+  titulo: string;
+  categoria: string | null;
+  conteudo: string | null;
+  fonte: string | null;
+  data: string | null;
+  url: string;
+  updatedAt: string;
 }
 
-interface Agent {
-  id: string;
-  name: string;
-  emoji: string;
+interface MemoriaResponse {
+  entries: MemoryEntry[];
+  total: number;
+  updatedAt: string;
 }
 
-const categoryColors: Record<string, string> = {
-  decision: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  lesson: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  context: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  default: "bg-muted text-muted-foreground",
+const CATEGORIA_COLORS: Record<string, string> = {
+  "Decisão": "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  "Lição": "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  "Insight": "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  "Aprendizado": "bg-green-500/10 text-green-400 border-green-500/20",
+  "Sistema Openclaw": "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  "Pendência": "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  "Correção": "bg-red-500/10 text-red-400 border-red-500/20",
+  "Registro": "bg-muted text-muted-foreground border-border",
+  "Contexto": "bg-muted text-muted-foreground border-border",
 };
 
-const categoryLabels: Record<string, string> = {
-  decision: "Decisão",
-  lesson: "Aprendizado",
-  context: "Contexto",
-};
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+const ALL_CATS = ["Todos", "Decisão", "Lição", "Insight", "Aprendizado", "Sistema Openclaw", "Pendência", "Correção", "Registro", "Contexto"];
 
 const MemoriaDecisoes = () => {
-  const { data: memories, isLoading } = useSupabaseQuery<Memory>(
-    "memories",
-    "memories",
-    { order: { column: "created_at", ascending: false } }
+  const [filter, setFilter] = useState("Todos");
+  const { data, isLoading, isError, dataUpdatedAt, refetch, isFetching } =
+    useNotionQuery<MemoriaResponse>("memoria", "memoria", 120_000);
+
+  const entries = (data?.entries ?? []).filter(
+    (e) => filter === "Todos" || e.categoria === filter
   );
-  const { data: agents } = useSupabaseQuery<Agent>("agents-list", "agents");
-
-  const agentMap = new Map(agents?.map((a) => [a.id, a]) ?? []);
-
-  const grouped = (memories ?? []).reduce<Record<string, Memory[]>>((acc, m) => {
-    const cat = m.category ?? "context";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(m);
-    return acc;
-  }, {});
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Memória & Decisões</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Decisões técnicas, aprendizados e contexto acumulado pelo time
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Memória & Decisões</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Decisões, lições e contexto do time · {data?.total ?? 0} entradas
+          </p>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+          {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("pt-BR") : "—"}
+        </button>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-2">
+        {ALL_CATS.filter(cat => cat === "Todos" || (data?.entries ?? []).some(e => e.categoria === cat)).map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setFilter(cat)}
+            className={cn(
+              "px-3 py-1 rounded-full text-xs border transition-colors",
+              filter === cat
+                ? "bg-foreground text-background border-foreground"
+                : "border-border text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
       {isLoading ? (
-        <Skeleton className="h-64 w-full" />
-      ) : memories && memories.length > 0 ? (
-        <div className="space-y-8">
-          {Object.entries(grouped).map(([category, items]) => (
-            <div key={category} className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Brain className="h-4 w-4 text-cyan-400" />
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  {categoryLabels[category] ?? category}
-                </h2>
-                <Badge variant="secondary" className="text-[10px]">
-                  {items.length}
-                </Badge>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {items.map((mem) => {
-                  const agent = mem.agent_id ? agentMap.get(mem.agent_id) : null;
-                  const colorClass = categoryColors[category] ?? categoryColors.default;
-                  return (
-                    <Card key={mem.id} className="border-border/50">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <p className="text-sm font-semibold leading-snug">{mem.title}</p>
-                          <Badge className={`text-[10px] shrink-0 ${colorClass}`}>
-                            {categoryLabels[category] ?? category}
-                          </Badge>
-                        </div>
-                        {mem.content && (
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
-                            {mem.content}
-                          </p>
-                        )}
-                        <div className="mt-3 flex items-center justify-between">
-                          {agent ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm">{agent.emoji}</span>
-                              <span className="text-[11px] text-muted-foreground">{agent.name}</span>
-                            </div>
-                          ) : (
-                            <span />
-                          )}
-                          <p className="text-[10px] text-muted-foreground">
-                            {formatDate(mem.created_at)}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        <div className="grid gap-3">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+        </div>
+      ) : isError ? (
+        <div className="border border-destructive/30 rounded-lg p-6 text-center text-sm text-destructive">
+          Erro ao carregar memória. Verifique a NOTION_API_KEY.
         </div>
       ) : (
-        <div className="border border-dashed border-border/30 rounded-lg p-12 text-center">
-          <Brain className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhuma memória registrada ainda.</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            As memórias e decisões do time aparecerão aqui.
-          </p>
+        <div className="grid gap-3">
+          {entries.map((entry) => (
+            <a key={entry.id} href={entry.url} target="_blank" rel="noopener noreferrer">
+              <Card className="border-border/50 hover:border-border transition-colors cursor-pointer">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-medium leading-tight">{entry.titulo}</p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {entry.categoria && (
+                        <span className={cn(
+                          "text-[10px] px-2 py-0.5 rounded-full border font-medium",
+                          CATEGORIA_COLORS[entry.categoria] || CATEGORIA_COLORS["Registro"]
+                        )}>
+                          {entry.categoria}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {entry.conteudo && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">{entry.conteudo}</p>
+                  )}
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                    {entry.fonte && <span>📌 {entry.fonte}</span>}
+                    {entry.data && <span>📅 {new Date(entry.data).toLocaleDateString("pt-BR")}</span>}
+                    {!entry.data && (
+                      <span>🕐 {new Date(entry.updatedAt).toLocaleDateString("pt-BR")}</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </a>
+          ))}
+          {entries.length === 0 && (
+            <div className="border border-dashed border-border/30 rounded-lg p-8 text-center text-sm text-muted-foreground">
+              Nenhuma entrada encontrada
+            </div>
+          )}
         </div>
       )}
     </div>
