@@ -35,7 +35,7 @@ const Auth = () => {
         <Card className="w-[400px] border-border/50">
           <CardHeader className="text-center space-y-2">
             <CardTitle className="text-2xl font-semibold tracking-tight">
-              TrenchClaw
+              TotoClaw
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Sign in to continue

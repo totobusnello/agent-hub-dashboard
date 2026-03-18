@@ -57,7 +57,7 @@ function CoreNodeComponent(_props: NodeProps) {
 
       {/* Label */}
       <div className="mt-2 text-[11px] font-semibold tracking-widest uppercase text-cyan-400/90 font-mono">
-        TrenchClaw Core
+        TotoClaw Core
       </div>
       <div className="text-[8px] text-muted-foreground tracking-wider font-mono">
         NEURAL COMMAND

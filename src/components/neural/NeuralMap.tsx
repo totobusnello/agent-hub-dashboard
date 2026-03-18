@@ -101,7 +101,7 @@ function buildFlowData(agents: Agent[], relationships: AgentRelationship[]) {
       type: "energyEdge",
       data: {
         sourceStatus: "active",
-        sourceName: "TrenchClaw Core",
+        sourceName: "TotoClaw Core",
       } satisfies EnergyEdgeData,
     });
   }
