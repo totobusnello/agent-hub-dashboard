@@ -1,182 +1,192 @@
-import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useNotionQuery } from "@/hooks/useNotionQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { RefreshCw, GitCommit, Rocket, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface CronJob {
-  id: string;
-  name: string;
-  schedule: string;
-  last_run_at: string | null;
-  next_expected_at: string | null;
-  enabled: boolean;
-  agent_id: string | null;
+interface Commit {
+  sha: string;
+  message: string;
+  author: string;
+  date: string;
+  url: string;
+  repo: string;
 }
 
-interface Agent {
+interface Deploy {
   id: string;
+  url: string;
+  state: string;
+  createdAt: string;
   name: string;
-  emoji: string;
-  status: string;
-  model: string | null;
-  last_seen_at: string | null;
 }
 
-function timeAgo(dateStr: string | null): string {
-  if (!dateStr) return "Nunca";
+interface UpdatesResponse {
+  commits: Commit[];
+  deploys: Deploy[];
+  repos: string[];
+  updatedAt: string;
+}
+
+const REPO_LABELS: Record<string, string> = {
+  "totobusnello/nox-workspace": "nox-workspace",
+  "totobusnello/agent-hub-dashboard": "dashboard",
+};
+
+const REPO_COLORS: Record<string, string> = {
+  "totobusnello/nox-workspace": "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  "totobusnello/agent-hub-dashboard": "bg-purple-500/10 text-purple-400 border-purple-500/20",
+};
+
+const DEPLOY_STATE_COLORS: Record<string, string> = {
+  READY: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  BUILDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  ERROR: "bg-red-500/10 text-red-400 border-red-500/20",
+  INITIALIZING: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+};
+
+function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Agora";
-  if (mins < 60) return `${mins}m atrás`;
+  if (mins < 1) return "agora";
+  if (mins < 60) return `${mins}min atrás`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h atrás`;
-  return `${Math.floor(hrs / 24)}d atrás`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d atrás`;
+}
+
+function formatCommitMsg(msg: string): string {
+  // Remove prefixes like "feat:", "fix:", "docs:" para mostrar só o conteúdo
+  return msg.replace(/^(feat|fix|docs|chore|refactor|style|test|build|ci|perf|revert)(\(.+?\))?:\s*/i, "");
+}
+
+function getCommitType(msg: string): { label: string; color: string } {
+  if (/^feat/i.test(msg)) return { label: "feat", color: "text-cyan-400" };
+  if (/^fix/i.test(msg)) return { label: "fix", color: "text-red-400" };
+  if (/^docs/i.test(msg)) return { label: "docs", color: "text-yellow-400" };
+  if (/^chore/i.test(msg)) return { label: "chore", color: "text-muted-foreground" };
+  if (/^refactor/i.test(msg)) return { label: "refactor", color: "text-purple-400" };
+  return { label: "update", color: "text-muted-foreground" };
 }
 
 const UpdateSistema = () => {
-  const { data: crons, isLoading: cronsLoading } = useSupabaseQuery<CronJob>(
-    "cron-jobs",
-    "cron_jobs",
-    { order: { column: "name", ascending: true } }
-  );
-  const { data: agents, isLoading: agentsLoading } = useSupabaseQuery<Agent>(
-    "agents-status",
-    "agents",
-    { order: { column: "name", ascending: true } }
-  );
+  const { data, isLoading, isError, dataUpdatedAt, refetch, isFetching } =
+    useNotionQuery<UpdatesResponse>("updates", "updates", 120_000);
 
-  const isLoading = cronsLoading || agentsLoading;
-
-  const activeCrons = crons?.filter((c) => c.enabled) ?? [];
-  const onlineAgents = agents?.filter((a) => a.status === "online") ?? [];
+  const commits = data?.commits ?? [];
+  const deploys = data?.deploys ?? [];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Update de Sistema</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Estado atual da infra — agentes, crons e saúde geral do sistema
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Update de Sistema</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Commits recentes e deploys do time
+          </p>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+          {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("pt-BR") : "—"}
+        </button>
       </div>
 
       {isLoading ? (
-        <Skeleton className="h-64 w-full" />
+        <div className="grid gap-3">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+        </div>
+      ) : isError ? (
+        <div className="border border-destructive/30 rounded-lg p-6 text-center text-sm text-destructive">
+          Erro ao carregar updates. Verifique GITHUB_TOKEN.
+        </div>
       ) : (
-        <>
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Commits — 2/3 da tela */}
+          <div className="lg:col-span-2 space-y-3">
             <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Agentes Online</p>
-                <p className="text-3xl font-mono font-bold mt-1 text-cyan-400">
-                  {onlineAgents.length}/{agents?.length ?? 0}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Crons Ativos</p>
-                <p className="text-3xl font-mono font-bold mt-1 text-cyan-400">
-                  {activeCrons.length}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Último Heartbeat</p>
-                <p className="text-sm font-mono font-bold mt-1">
-                  {timeAgo(agents?.[0]?.last_seen_at ?? null)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Status</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className={cn(
-                    "h-2 w-2 rounded-full",
-                    onlineAgents.length > 0 ? "bg-green-400" : "bg-red-400"
-                  )} />
-                  <p className="text-sm font-mono font-bold">
-                    {onlineAgents.length > 0 ? "ONLINE" : "OFFLINE"}
-                  </p>
-                </div>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <GitCommit className="h-4 w-4 text-cyan-400" />
+                  Commits recentes
+                  <span className="text-muted-foreground font-normal">({commits.length})</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 p-0">
+                {commits.map((commit) => {
+                  const type = getCommitType(commit.message);
+                  const msg = formatCommitMsg(commit.message);
+                  return (
+                    <a
+                      key={`${commit.sha}-${commit.date}`}
+                      href={commit.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-3 px-4 py-3 border-b border-border/20 last:border-0 hover:bg-muted/20 transition-colors group"
+                    >
+                      <span className="font-mono text-[10px] text-muted-foreground mt-0.5 w-12 shrink-0">{commit.sha}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className={cn("text-[10px] font-medium", type.color)}>{type.label}</span>
+                          <span className={cn(
+                            "text-[10px] px-1.5 py-0 rounded border",
+                            REPO_COLORS[commit.repo] || "bg-muted text-muted-foreground border-border"
+                          )}>
+                            {REPO_LABELS[commit.repo] || commit.repo}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-tight truncate">{msg}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{commit.author} · {timeAgo(commit.date)}</p>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" />
+                    </a>
+                  );
+                })}
               </CardContent>
             </Card>
           </div>
 
-          {/* Agents status */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-cyan-400" />
-                Status dos Agentes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {agents?.map((agent) => (
-                  <div key={agent.id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{agent.emoji}</span>
-                      <div>
-                        <p className="text-sm font-medium capitalize">{agent.name}</p>
-                        {agent.model && (
-                          <p className="text-[10px] text-muted-foreground">{agent.model}</p>
-                        )}
-                      </div>
+          {/* Deploys — 1/3 da tela */}
+          <div className="space-y-3">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Rocket className="h-4 w-4 text-cyan-400" />
+                  Deploys recentes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {deploys.map((deploy) => (
+                  <a
+                    key={deploy.id}
+                    href={deploy.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-3 rounded-lg border border-border/40 hover:border-border transition-colors group"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded border font-medium",
+                        DEPLOY_STATE_COLORS[deploy.state] || "bg-muted text-muted-foreground border-border"
+                      )}>
+                        {deploy.state}
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <p className="text-[11px] text-muted-foreground">{timeAgo(agent.last_seen_at)}</p>
-                      <Badge
-                        variant={agent.status === "online" ? "default" : "secondary"}
-                        className={cn(
-                          "text-[10px]",
-                          agent.status === "online" && "bg-green-500/20 text-green-400 border-green-500/30"
-                        )}
-                      >
-                        {agent.status}
-                      </Badge>
-                    </div>
-                  </div>
+                    <p className="text-[11px] text-muted-foreground truncate">{deploy.url.replace("https://", "")}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{timeAgo(deploy.createdAt)}</p>
+                  </a>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Crons list */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4 text-cyan-400" />
-                Cron Jobs ({activeCrons.length} ativos)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {crons?.map((cron) => (
-                  <div key={cron.id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
-                    <div>
-                      <p className="text-sm font-medium">{cron.name}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">{cron.schedule}</p>
-                    </div>
-                    <div className="flex items-center gap-3 text-right">
-                      <div>
-                        <p className="text-[10px] text-muted-foreground">último: {timeAgo(cron.last_run_at)}</p>
-                      </div>
-                      <div className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        cron.enabled ? "bg-green-400" : "bg-muted-foreground"
-                      )} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </>
+                {deploys.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">Nenhum deploy recente</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
     </div>
   );
