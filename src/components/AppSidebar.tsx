@@ -6,6 +6,7 @@ import {
   CheckSquare,
   RefreshCw,
   Brain,
+  Activity,
   LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -34,6 +35,7 @@ const navItems = [
   { title: "Blockers", url: "/blockers", icon: AlertTriangle, eventSection: "blockers" },
   { title: "Update de Sistema", url: "/update-sistema", icon: RefreshCw, eventSection: "update" },
   { title: "Memória & Decisões", url: "/memoria", icon: Brain, eventSection: "memoria" },
+  { title: "Memória & Saúde", url: "/memoria-health", icon: Activity, eventSection: "memoria-health" },
 ];
 
 // Map event types to sidebar sections that should glow
