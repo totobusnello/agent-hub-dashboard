@@ -16,6 +16,7 @@ import MemoriaHealth from "./pages/MemoriaHealth";
 import MemoryHealth from "./pages/MemoryHealth";
 import KnowledgeGraph from "./pages/KnowledgeGraph";
 import AgentIntel from "./pages/AgentIntel";
+import SystemPaper from "./pages/SystemPaper";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/memory" element={<ProtectedRoute><MemoryHealth /></ProtectedRoute>} />
             <Route path="/knowledge-graph" element={<ProtectedRoute><KnowledgeGraph /></ProtectedRoute>} />
             <Route path="/agent-intel" element={<ProtectedRoute><AgentIntel /></ProtectedRoute>} />
+            <Route path="/system-paper" element={<ProtectedRoute><SystemPaper /></ProtectedRoute>} />
             {/* Legacy redirects */}
             <Route path="/todos" element={<Navigate to="/tarefas" replace />} />
             <Route path="*" element={<NotFound />} />

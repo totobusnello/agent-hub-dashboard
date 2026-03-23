@@ -40,6 +40,7 @@ const navItems = [
   { title: "Memória & Saúde", url: "/memoria-health", icon: Activity, eventSection: "memoria-health" },
   { title: "Knowledge Graph", url: "/knowledge-graph", icon: GitBranch, eventSection: "kg" },
   { title: "Agent Intel", url: "/agent-intel", icon: Sparkles, eventSection: "intel" },
+  { title: "System Paper", url: "/system-paper", icon: Activity, eventSection: "paper" },
 ];
 
 // Map event types to sidebar sections that should glow
