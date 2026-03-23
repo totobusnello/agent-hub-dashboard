@@ -193,7 +193,6 @@ export default function MemoryHealth() {
             </CardContent>
           </Card>
         )}
-      </div>
     </div>
   );
 }
