@@ -13,6 +13,9 @@ import Tarefas from "./pages/Tarefas";
 import UpdateSistema from "./pages/UpdateSistema";
 import MemoriaDecisoes from "./pages/MemoriaDecisoes";
 import MemoriaHealth from "./pages/MemoriaHealth";
+import MemoryHealth from "./pages/MemoryHealth";
+import KnowledgeGraph from "./pages/KnowledgeGraph";
+import AgentIntel from "./pages/AgentIntel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +56,9 @@ const App = () => (
             <Route path="/update-sistema" element={<ProtectedRoute><UpdateSistema /></ProtectedRoute>} />
             <Route path="/memoria" element={<ProtectedRoute><MemoriaDecisoes /></ProtectedRoute>} />
             <Route path="/memoria-health" element={<ProtectedRoute><MemoriaHealth /></ProtectedRoute>} />
+            <Route path="/memory" element={<ProtectedRoute><MemoryHealth /></ProtectedRoute>} />
+            <Route path="/knowledge-graph" element={<ProtectedRoute><KnowledgeGraph /></ProtectedRoute>} />
+            <Route path="/agent-intel" element={<ProtectedRoute><AgentIntel /></ProtectedRoute>} />
             {/* Legacy redirects */}
             <Route path="/todos" element={<Navigate to="/tarefas" replace />} />
             <Route path="*" element={<NotFound />} />

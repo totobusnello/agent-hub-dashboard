@@ -8,6 +8,8 @@ import {
   Brain,
   Activity,
   LogOut,
+  GitBranch,
+  Sparkles,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -36,6 +38,8 @@ const navItems = [
   { title: "Update de Sistema", url: "/update-sistema", icon: RefreshCw, eventSection: "update" },
   { title: "Memória & Decisões", url: "/memoria", icon: Brain, eventSection: "memoria" },
   { title: "Memória & Saúde", url: "/memoria-health", icon: Activity, eventSection: "memoria-health" },
+  { title: "Knowledge Graph", url: "/knowledge-graph", icon: GitBranch, eventSection: "kg" },
+  { title: "Agent Intel", url: "/agent-intel", icon: Sparkles, eventSection: "intel" },
 ];
 
 // Map event types to sidebar sections that should glow
