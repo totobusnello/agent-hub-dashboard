@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { useNotionQuery } from "@/hooks/useNotionQuery";
 import { useLatestActivity } from "@/hooks/useAgentActivity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,9 +61,11 @@ function timeAgo(dateStr: string): string {
 
 
 const Index = () => {
-  const { data: allAgents, isLoading } = useSupabaseQuery<Agent>(
+  // Agentes: carregado da API local (não Supabase)
+  const { data: allAgents, isLoading } = useNotionQuery<Agent[]>(
     "agents",
-    "agent_current_status"
+    "agents",
+    30_000
   );
   const { data: blockers } = useSupabaseQuery("blockers-count", "blockers", {
     filter: { column: "status", value: "open" },
