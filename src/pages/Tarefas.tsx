@@ -11,7 +11,6 @@ const COLUMNS = [
   "A fazer",
   "Aguardando input",
   "Pausado",
-  "Concluída",
   "Concluído",
 ] as const;
 
@@ -20,7 +19,6 @@ const COLUMN_CONFIG: Record<string, { label: string; color: string; dot: string;
   "A fazer":          { label: "A Fazer",           color: "bg-blue-50 dark:bg-blue-950",            dot: "bg-blue-400",     group: "open"  },
   "Aguardando input": { label: "Aguardando Input",  color: "bg-yellow-50 dark:bg-yellow-950",        dot: "bg-yellow-400",   group: "wait"  },
   "Pausado":          { label: "Pausado",           color: "bg-orange-50 dark:bg-orange-950",        dot: "bg-orange-400",   group: "wait"  },
-  "Concluída":        { label: "Concluída",         color: "bg-emerald-50 dark:bg-emerald-950",      dot: "bg-emerald-400",  group: "done"  },
   "Concluído":        { label: "Concluído",         color: "bg-emerald-50 dark:bg-emerald-950",      dot: "bg-emerald-500",  group: "done"  },
 };
 
@@ -78,7 +76,7 @@ const Tarefas = () => {
 
   // Status visíveis (só mostrar colunas com itens ou que são "abertas")
   const visibleColumns = COLUMNS.filter(
-    (col) => tasksByStatus[col].length > 0 || ["Pendente", "A fazer", "Aguardando input"].includes(col)
+    (col) => (tasksByStatus[col]?.length ?? 0) > 0 || ["Pendente", "A fazer", "Aguardando input"].includes(col)
   );
 
   const totalOpen = tasks.filter(t => COLUMN_CONFIG[t.rawStatus]?.group !== "done").length;
