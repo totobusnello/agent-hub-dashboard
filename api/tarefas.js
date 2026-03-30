@@ -1,12 +1,8 @@
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const DB_TAREFAS = "31d8e29911ab81c88379fed013991e7e";
 
-const STATUS_MAP = {
-  "Pendente": "todo", "A fazer": "todo", "Aberto": "todo",
-  "Em andamento": "in_progress", "Aguardando input": "in_progress", "Aguardando Toto": "in_progress", "Pausado": "in_progress",
-  "Concluída": "done", "Concluído": "done",
-  "Cancelada": "cancelled",
-};
+// Status espelhados do Notion — sem remapeamento
+const DONE_STATUSES = new Set(["Concluída", "Concluído", "Cancelada"]);
 
 const PRIORITY_MAP = {
   "🔴 Alta": 1, "Alta": 1,
@@ -68,8 +64,8 @@ export default async function handler(req, res) {
       return {
         id: page.id,
         title: extractText(p.Tarefa) || "(sem título)",
-        status: STATUS_MAP[rawStatus] || "todo",
-        rawStatus,
+        status: rawStatus || "Pendente",  // campo status = rawStatus (sem remapeamento)
+        rawStatus: rawStatus || "Pendente",
         priority: PRIORITY_MAP[rawPriority] || 99,
         rawPriority,
         para: extractText(p.Para),
