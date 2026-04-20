@@ -8,18 +8,18 @@ import { RefreshCw, ExternalLink } from "lucide-react";
 // Espelha exatamente os status do Notion
 const COLUMNS = [
   "Pendente",
-  "A fazer",
+  "Em andamento",
   "Aguardando input",
-  "Pausado",
+  "Aguardando Toto",
   "Concluído",
 ] as const;
 
 const COLUMN_CONFIG: Record<string, { label: string; color: string; dot: string; group: string }> = {
-  "Pendente":         { label: "Pendente",         color: "bg-slate-100 dark:bg-slate-800",         dot: "bg-slate-400",    group: "open"  },
-  "A fazer":          { label: "A Fazer",           color: "bg-blue-50 dark:bg-blue-950",            dot: "bg-blue-400",     group: "open"  },
-  "Aguardando input": { label: "Aguardando Input",  color: "bg-yellow-50 dark:bg-yellow-950",        dot: "bg-yellow-400",   group: "wait"  },
-  "Pausado":          { label: "Pausado",           color: "bg-orange-50 dark:bg-orange-950",        dot: "bg-orange-400",   group: "wait"  },
-  "Concluído":        { label: "Concluído",         color: "bg-emerald-50 dark:bg-emerald-950",      dot: "bg-emerald-500",  group: "done"  },
+  "Pendente":          { label: "Pendente",          color: "bg-slate-100 dark:bg-slate-800",         dot: "bg-slate-400",    group: "open"  },
+  "Em andamento":      { label: "Em Andamento",      color: "bg-blue-50 dark:bg-blue-950",            dot: "bg-blue-400",     group: "open"  },
+  "Aguardando input":  { label: "Aguardando Input",  color: "bg-yellow-50 dark:bg-yellow-950",        dot: "bg-yellow-400",   group: "wait"  },
+  "Aguardando Toto":   { label: "Aguardando Toto",   color: "bg-orange-50 dark:bg-orange-950",        dot: "bg-orange-400",   group: "wait"  },
+  "Concluído":         { label: "Concluído",         color: "bg-emerald-50 dark:bg-emerald-950",      dot: "bg-emerald-500",  group: "done"  },
 };
 
 const PRIORITY_CONFIG: Record<string, { variant: "destructive" | "secondary" | "outline"; label: string }> = {
@@ -68,15 +68,18 @@ const Tarefas = () => {
 
   const tasks = data?.tasks ?? [];
 
-  // Agrupar por status exato do Notion
+  // Agrupar por status exato do Notion (status desconhecidos vão para Pendente)
+  const knownStatuses = new Set<string>(COLUMNS);
   const tasksByStatus = COLUMNS.reduce((acc, col) => {
-    acc[col] = tasks.filter((t) => t.rawStatus === col);
+    acc[col] = tasks.filter((t) =>
+      t.rawStatus === col || (!knownStatuses.has(t.rawStatus) && col === "Pendente")
+    );
     return acc;
   }, {} as Record<string, Task[]>);
 
   // Status visíveis (só mostrar colunas com itens ou que são "abertas")
   const visibleColumns = COLUMNS.filter(
-    (col) => (tasksByStatus[col]?.length ?? 0) > 0 || ["Pendente", "A fazer", "Aguardando input"].includes(col)
+    (col) => (tasksByStatus[col]?.length ?? 0) > 0 || ["Pendente", "Em andamento", "Aguardando input"].includes(col)
   );
 
   const totalOpen = tasks.filter(t => COLUMN_CONFIG[t.rawStatus]?.group !== "done").length;

@@ -3,9 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import Auth from "./pages/Auth";
 import Index from "./pages/Index";
 import CronHealth from "./pages/CronHealth";
 import Blockers from "./pages/Blockers";
@@ -21,25 +19,9 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="font-mono text-muted-foreground animate-pulse">INITIALIZING...</div>
-      </div>
-    );
-  }
-  if (!user) return <Navigate to="/auth" replace />;
-  return <DashboardLayout>{children}</DashboardLayout>;
-}
-
-function AuthRoute() {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
-  return <Auth />;
-}
+const Page = ({ children }: { children: React.ReactNode }) => (
+  <DashboardLayout>{children}</DashboardLayout>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -47,25 +29,22 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<AuthRoute />} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="/cron" element={<ProtectedRoute><CronHealth /></ProtectedRoute>} />
-            <Route path="/blockers" element={<ProtectedRoute><Blockers /></ProtectedRoute>} />
-            <Route path="/tarefas" element={<ProtectedRoute><Tarefas /></ProtectedRoute>} />
-            <Route path="/update-sistema" element={<ProtectedRoute><UpdateSistema /></ProtectedRoute>} />
-            <Route path="/memoria" element={<ProtectedRoute><MemoriaDecisoes /></ProtectedRoute>} />
-            <Route path="/memoria-health" element={<ProtectedRoute><MemoriaHealth /></ProtectedRoute>} />
-            <Route path="/memory" element={<ProtectedRoute><MemoryHealth /></ProtectedRoute>} />
-            <Route path="/knowledge-graph" element={<ProtectedRoute><KnowledgeGraph /></ProtectedRoute>} />
-            <Route path="/agent-intel" element={<ProtectedRoute><AgentIntel /></ProtectedRoute>} />
-            <Route path="/system-paper" element={<ProtectedRoute><SystemPaper /></ProtectedRoute>} />
-            {/* Legacy redirects */}
-            <Route path="/todos" element={<Navigate to="/tarefas" replace />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/" element={<Page><Index /></Page>} />
+          <Route path="/cron" element={<Page><CronHealth /></Page>} />
+          <Route path="/blockers" element={<Page><Blockers /></Page>} />
+          <Route path="/tarefas" element={<Page><Tarefas /></Page>} />
+          <Route path="/update-sistema" element={<Page><UpdateSistema /></Page>} />
+          <Route path="/memoria" element={<Page><MemoriaDecisoes /></Page>} />
+          <Route path="/memoria-health" element={<Page><MemoriaHealth /></Page>} />
+          <Route path="/memory" element={<Page><MemoryHealth /></Page>} />
+          <Route path="/knowledge-graph" element={<Page><KnowledgeGraph /></Page>} />
+          <Route path="/agent-intel" element={<Page><AgentIntel /></Page>} />
+          <Route path="/system-paper" element={<Page><SystemPaper /></Page>} />
+          <Route path="/auth" element={<Navigate to="/" replace />} />
+          <Route path="/todos" element={<Navigate to="/tarefas" replace />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

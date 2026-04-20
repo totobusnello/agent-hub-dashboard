@@ -7,14 +7,11 @@ import {
   RefreshCw,
   Brain,
   Activity,
-  LogOut,
   GitBranch,
   Sparkles,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -55,7 +52,6 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { signOut, user } = useAuth();
   const { data: latestEvents } = useLatestActivity(1);
   const latestEvent = latestEvents?.[latestEvents.length - 1] ?? null;
   const [glowingSections, setGlowingSections] = useState<Set<string>>(new Set());
@@ -119,18 +115,9 @@ export function AppSidebar() {
       <SidebarFooter className="p-2">
         {!collapsed && (
           <p className="text-xs text-muted-foreground truncate px-2 mb-1">
-            {user?.email}
+            TotoClaw
           </p>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={signOut}
-          className="w-full justify-start text-muted-foreground hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          {!collapsed && "Sign Out"}
-        </Button>
       </SidebarFooter>
     </Sidebar>
   );
